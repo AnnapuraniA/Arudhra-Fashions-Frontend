@@ -13,18 +13,31 @@ const getBackendBaseUrl = () => {
 export const getImageUrl = (imagePath) => {
   if (!imagePath) return ''
   
-  // If already a full URL (starts with http:// or https://), return as is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath
+  // Compute backend base URL (no trailing slash)
+  const backendUrl = getBackendBaseUrl().replace(/\/$/, '')
+
+  try {
+    // If it's an absolute URL, normalize and ensure it points to the backend
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      const parsed = new URL(imagePath)
+      // Replace localhost or missing/incorrect host with backend host
+      if (parsed.hostname === 'localhost' || parsed.hostname === window.location.hostname) {
+        // Rebuild using backend base
+        return `${backendUrl}${parsed.pathname}${parsed.search || ''}${parsed.hash || ''}`
+      }
+      // If imagePath already points to the backend or an external CDN, return as-is
+      return imagePath
+    }
+  } catch (e) {
+    // If URL parsing fails, fall back to treating as relative path
   }
-  
-  // If relative path, prepend backend base URL
-  const backendUrl = getBackendBaseUrl()
+
+  // If relative path (starts with /), prepend backend base
   if (imagePath.startsWith('/')) {
     return `${backendUrl}${imagePath}`
   }
-  
-  // Otherwise, assume it's a relative path and prepend backend URL
+
+  // Otherwise, assume it's a relative filename and prepend backend URL + /uploads/products if needed
   return `${backendUrl}/${imagePath}`
 }
 
